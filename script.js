@@ -37,16 +37,16 @@ elements.startBtn.addEventListener('click', () => {
             elements.chime.currentTime = 0;
             elements.chime.volume = 1;
         });
-    } catch(e) { 
+    } catch (e) {
         console.log("Audio unlock failed", e);
     }
-    updateTimer(); 
+    updateTimer();
 });
 
 elements.muteBtn.addEventListener('click', () => {
     isMuted = !isMuted;
     elements.muteBtn.style.opacity = isMuted ? "0.3" : "1";
-    elements.muteBtn.innerHTML = isMuted 
+    elements.muteBtn.innerHTML = isMuted
         ? `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>` // strike
         : `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>`; // normal
 });
@@ -67,7 +67,7 @@ function formatTime(h, m) {
 function updateTimer() {
     const now = new Date();
     const currentTotalMinutes = getMinutesFromMidnight(now);
-    
+
     // Schedule Bounds
     const startTotalMinutes = SCHEDULE_START_HOUR * 60 + SCHEDULE_START_MINUTE;
     const endTotalMinutes = SCHEDULE_END_HOUR * 60 + SCHEDULE_END_MINUTE;
@@ -76,15 +76,26 @@ function updateTimer() {
 
     if (currentTotalMinutes < startTotalMinutes) {
         // Before Schedule
-        setMode('WAITING', startTotalMinutes - currentTotalMinutes, startTotalMinutes, 'IDLE');
+        setMode('WAITING', 0, 0, 'IDLE'); // timeLeft arg unused
         elements.nextEventTime.textContent = formatTime(SCHEDULE_START_HOUR, SCHEDULE_START_MINUTE);
         return;
     }
 
     if (currentTotalMinutes >= endTotalMinutes) {
+        // Just finished? Trigger final chime if we were properly running
+        if (lastMode !== 'FINISHED' && lastMode !== '') {
+            if (userHasInteracted && !isMuted) triggerChime();
+        }
+
         // After Schedule
         setMode('FINISHED', 0, 0, 'IDLE');
+        elements.minutes.textContent = "00";
+        elements.seconds.textContent = "00";
+        elements.bar.style.width = "100%";
+        elements.badge.textContent = "FINISHED";
+        elements.body.className = ""; // Reset theme
         elements.nextEventTime.textContent = "--:--";
+        lastMode = 'FINISHED'; // Prevent re-triggering
         return;
     }
 
@@ -92,45 +103,55 @@ function updateTimer() {
     const minutesSinceStart = currentTotalMinutes - startTotalMinutes;
     // We also need seconds for precise timer
     const secondsSinceStart = minutesSinceStart * 60 + now.getSeconds();
-    
+
     const cycleIndex = Math.floor(minutesSinceStart / CYCLE_DURATION_MIN);
     const minutesInCycle = minutesSinceStart % CYCLE_DURATION_MIN;
     const secondsInCycle = minutesInCycle * 60 + now.getSeconds();
-    
+
     // Determine Work or Break
     // 0-25m: WORK
     // 25-30m: BREAK
-    
+
     let mode = '';
     let timeLeftSeconds = 0;
-    
+
     if (minutesInCycle < WORK_DURATION_MIN) {
         mode = 'WORK';
         const totalWorkSeconds = WORK_DURATION_MIN * 60;
         const currentWorkSeconds = secondsInCycle;
         timeLeftSeconds = totalWorkSeconds - currentWorkSeconds;
-        
+
         // Next event is break
         const nextBreakStartMinOffset = (cycleIndex * CYCLE_DURATION_MIN) + WORK_DURATION_MIN;
         const breakStartTotal = startTotalMinutes + nextBreakStartMinOffset;
-        const h = Math.floor(breakStartTotal / 60);
-        const m = breakStartTotal % 60;
-        elements.nextEventTime.textContent = `${formatTime(h, m)} (休憩)`;
-        
+        // Cap next event time if it exceeds end time
+        if (breakStartTotal >= endTotalMinutes) {
+            elements.nextEventTime.textContent = `${formatTime(SCHEDULE_END_HOUR, SCHEDULE_END_MINUTE)} (終了)`;
+        } else {
+            const h = Math.floor(breakStartTotal / 60);
+            const m = breakStartTotal % 60;
+            elements.nextEventTime.textContent = `${formatTime(h, m)} (休憩)`;
+        }
+
     } else {
         mode = 'BREAK';
         const totalBreakSeconds = BREAK_DURATION_MIN * 60;
         const currentBreakSeconds = secondsInCycle - (WORK_DURATION_MIN * 60);
         timeLeftSeconds = totalBreakSeconds - currentBreakSeconds;
-        
+
         // Next event is Work
         const nextWorkStartMinOffset = ((cycleIndex + 1) * CYCLE_DURATION_MIN);
         const workStartTotal = startTotalMinutes + nextWorkStartMinOffset;
-        const h = Math.floor(workStartTotal / 60);
-        const m = workStartTotal % 60;
-        elements.nextEventTime.textContent = `${formatTime(h, m)} (作業)`;
+        // Cap next event time if it exceeds end time
+        if (workStartTotal >= endTotalMinutes) {
+            elements.nextEventTime.textContent = `${formatTime(SCHEDULE_END_HOUR, SCHEDULE_END_MINUTE)} (終了)`;
+        } else {
+            const h = Math.floor(workStartTotal / 60);
+            const m = workStartTotal % 60;
+            elements.nextEventTime.textContent = `${formatTime(h, m)} (作業)`;
+        }
     }
-    
+
     render(mode, timeLeftSeconds);
 }
 
@@ -145,10 +166,10 @@ function render(mode, timeLeftSeconds) {
     // Minute/Seconds calc
     let m = Math.floor(timeLeftSeconds / 60);
     let s = timeLeftSeconds % 60;
-    
+
     // Adjust for negative (transition logic usually handles this, but just in case)
     if (timeLeftSeconds < 0) {
-       m = 0; s = 0; 
+        m = 0; s = 0;
     }
 
     elements.minutes.textContent = String(m).padStart(2, '0');
@@ -162,12 +183,12 @@ function render(mode, timeLeftSeconds) {
 
     // State Change Detection & Audio
     const cssMode = mode === 'WORK' ? 'mode-work' : 'mode-break';
-    
+
     if (lastMode !== mode) {
         if (lastMode !== '' && userHasInteracted && !isMuted) {
             triggerChime();
         }
-        
+
         elements.body.classList.remove('mode-work', 'mode-break');
         elements.body.classList.add(cssMode);
         elements.badge.textContent = mode === 'WORK' ? 'FOCUS' : 'BREAK';
