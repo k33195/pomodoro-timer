@@ -5,7 +5,7 @@ import sys
 import subprocess
 
 # --- 設定項目 ---
-ZOOM_URL = "https://us06web.zoom.us/j/99544229806?pwd=eHhxL2p4TndYME1xMnVQOFBCWjhZQT09"
+ZOOM_URL = "https://zoom.us/j/YOUR_MEETING_ID" # 公開時は自分のIDに書き換えてください
 
 # タイマーファイルの絶対パスを取得
 TIMER_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../index.html'))
