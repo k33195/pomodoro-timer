@@ -36,7 +36,8 @@ body {
 }
 
 /* Background Gradients */
-body::before, body::after {
+body::before,
+body::after {
     content: '';
     position: absolute;
     width: 600px;
@@ -62,8 +63,13 @@ body::after {
 }
 
 @keyframes flow {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(50px, 50px) scale(1.1); }
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    100% {
+        transform: translate(50px, 50px) scale(1.1);
+    }
 }
 
 .app-container {
@@ -80,7 +86,7 @@ body::after {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 3rem;
+    padding: clamp(1.5rem, 5vw, 3rem);
     position: relative;
     transition: all 0.3s ease;
 }
@@ -100,12 +106,12 @@ body::after {
 
 .timer-display {
     font-family: var(--font-display);
-    font-size: 12rem;
+    font-size: clamp(4rem, 25vw, 12rem);
     font-weight: 900;
     line-height: 1;
     margin: 2rem 0;
     font-variant-numeric: tabular-nums;
-    text-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    text-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
 }
@@ -116,7 +122,9 @@ body::after {
 }
 
 @keyframes pulse {
-    50% { opacity: 0.5; }
+    50% {
+        opacity: 0.5;
+    }
 }
 
 .progress-container {
@@ -221,11 +229,47 @@ body.mode-work .progress-bar,
 body.mode-work .status-badge {
     color: var(--accent-color);
 }
-body.mode-work .progress-bar { background: var(--accent-color); }
+
+body.mode-work .progress-bar {
+    background: var(--accent-color);
+}
 
 body.mode-break .timer-display,
 body.mode-break .progress-bar,
 body.mode-break .status-badge {
     color: var(--break-color);
 }
-body.mode-break .progress-bar { background: var(--break-color); }
+
+body.mode-break .progress-bar {
+    background: var(--break-color);
+}
+
+@media (max-width: 600px) {
+    .app-container {
+        width: 95vw;
+        min-height: auto;
+        padding: 2rem 1rem;
+    }
+
+    .status-badge {
+        position: static;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+        padding: 0.25rem 1rem;
+    }
+
+    .controls {
+        position: static;
+        margin-top: 2rem;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .info-panel {
+        font-size: 1.1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: center;
+        text-align: center;
+    }
+}
