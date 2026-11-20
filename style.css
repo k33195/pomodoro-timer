@@ -198,11 +198,13 @@ body::after {
 
 .overlay-content {
     text-align: center;
+    padding: 0 1.5rem;
 }
 
 .overlay-content h1 {
     font-family: var(--font-display);
-    font-size: 3rem;
+    /* 画面が狭いときは縮み、広いときは 3rem で止まる */
+    font-size: clamp(2rem, 10vw, 3rem);
     margin-bottom: 1rem;
 }
 
